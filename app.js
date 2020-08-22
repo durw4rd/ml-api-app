@@ -27,7 +27,7 @@ async function fetchTimeEntries() {
     // getting current date/time
     let today = new Date();
     let year = today.getFullYear();
-    let month = ('0' + today.getMonth()).slice(-2);
+    let month = ('0' + (today.getMonth() + 1)).slice(-2);
     let day = ('0' + today.getDate()).slice(-2);
     let fullDateYesterday = `${year}-${month}-${day - 1}`
     let dayStart = 'T000000';
@@ -37,9 +37,11 @@ async function fetchTimeEntries() {
 
     // set filter parameters
     let includeParam = 'include=user';
-    let timeFilter = `created_at_between=${singleDayParam}`;
+    let timeCreatedFilter = `created_at_between=${singleDayParam}`;
+    let actionPerformedFilter = `date_performed_between=${singleDayParam}`
+    let paginationParam = `per_page=150`
 
-    let responseFull = await axios.get(`https://api.mavenlink.com/api/v1/time_entries.json?${includeParam}&${timeFilter}`, config_get);
+    let responseFull = await axios.get(`https://api.mavenlink.com/api/v1/time_entries.json?${includeParam}&${paginationParam}&${actionPerformedFilter}`, config_get);
     let responseBody = responseFull.data;
 
     console.log(`### RESPONSE FROM THE AYNC-AWAIT`)
@@ -49,12 +51,12 @@ async function fetchTimeEntries() {
     */
     console.log(`Response status: ${responseFull.status} ${responseFull.statusText}`);
     console.log(`Number of returned time entries: ${responseBody.count}`);
-    console.log(responseBody.results);
-    console.log(responseBody.time_entries);
-    console.log(responseBody.users);
+    // console.log(responseBody.results);
+    // console.log(responseBody.time_entries);
+    // console.log(responseBody.users);
     console.log(responseBody.meta);
 
-    // Create array with users who added an entry (yesterday)
+    // Create array with users who added an entry yesterday (the date is controlled by request parameters)
     const userObjectValues = Object.values(responseBody.users)
     let userArray = [];
     userObjectValues.forEach((user) => {
@@ -64,7 +66,7 @@ async function fetchTimeEntries() {
         };
         userArray.push(userObject);
     });
-    console.log(`### PRINTING USERS WHO ENTERED TIME YESTERDAY`);
+    console.log(`### PRINTING USERS WHOS TIME ENTRY HAS YESTERDAY'S TIMESTAMP`);
     console.log(userArray);
 }
 
