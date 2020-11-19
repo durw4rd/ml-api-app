@@ -34,7 +34,8 @@ let fullTeamEMEA = [
     "lisa.pourier@optimizely.com"
 ]
 
-// Talking to the API using async-await function
+// Fetch entries from ML
+// Creates array of arrays with email addresses of ppl who didn't log any time where each nested array refers to a single day
 async function fetchTimeEntries() {
     // set generic filters
     let includeParam = 'include=user';
@@ -129,54 +130,52 @@ async function fetchTimeEntries() {
     return weeklySlackers
 }
 
-fetchTimeEntries()
-    .then(result => {
-        pplWhoSlackedEmail = [...new Set(result.flat(1))];
-        pplWhoSlackedObject = [];
-        pplWhoSlackedEmail.forEach(weeklySlackerEmail => {
-            let firstName = weeklySlackerEmail.split('.')[0];
-            let firstNameCap = firstName.charAt(0).toUpperCase() + firstName.slice(1);
-            
-            slackerObject = {
-                email: weeklySlackerEmail,
-                firstName: firstNameCap,
-                daysSlacked: []
-            };
+// Create an array of 'slacker' objects icluding user/slacker name, email, and array of slacked days
+// Function expects array of arrays as input
+let createSlackerObjects = (arg) => {
+    pplWhoSlackedEmails = [...new Set(arg.flat(1))];
+    pplWhoSlackedObjects = [];
+    pplWhoSlackedEmails.forEach(weeklySlackerEmail => {
+        let firstName = weeklySlackerEmail.split('.')[0];
+        let firstNameCap = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+        
+        slackerObject = {
+            email: weeklySlackerEmail,
+            firstName: firstNameCap,
+            daysSlacked: []
+        };
 
-            // dailySlackers.forEach( slacker => {
-            //     let emailAdress = slacker;
-            //     let firstName = slacker.split('.')[0];
-            //     let firstNameCap = firstName.charAt(0).toUpperCase() + firstName.slice(1);
-
-            //     console.log(`For day ${day}, I'll be sending email to: ${emailAdress} and in the body of the email, I'll address the person as ${firstNameCap}`);
-            // });
-
-            for (i=0; i<result.length; i++) {
-                let day = '';
-                switch(i) {
-                    case 0:
-                        day = 'Thursday'
-                        break
-                    case 1:
-                        day = 'Wednesday'
-                        break
-                    case 2:
-                        day = 'Tuesday'
-                        break
-                    case 3:
-                        day = 'Monday'
-                        break
-                }
-                let dailySlackers = result[i];
-                if (dailySlackers.includes(weeklySlackerEmail)) {
-                    slackerObject.daysSlacked.push(day);
-                }
-                slackerObject.daysSlacked.reverse();
+        for (i=0; i<arg.length; i++) {
+            let day = '';
+            switch(i) {
+                case 0:
+                    day = 'Thursday'
+                    break
+                case 1:
+                    day = 'Wednesday'
+                    break
+                case 2:
+                    day = 'Tuesday'
+                    break
+                case 3:
+                    day = 'Monday'
+                    break
             }
-            pplWhoSlackedObject.push(slackerObject);
-        });
-        console.log(pplWhoSlackedObject);
-    })
+            let dailySlackers = arg[i];
+            if (dailySlackers.includes(weeklySlackerEmail)) {
+                slackerObject.daysSlacked.push(day);
+            }
+            slackerObject.daysSlacked.reverse();
+        }
+        pplWhoSlackedObjects.push(slackerObject);
+    });
+    // console.log(pplWhoSlackedObjects);
+    return pplWhoSlackedObjects
+}
+
+// Call the two functions above, in order
+fetchTimeEntries()
+    .then( result => createSlackerObjects(result) )
     .catch(e => {
-        console.log(`There has been a problem: ${e}`);
+        console.log(`There has been a problem fetching data from ML: ${e}`);
     });
