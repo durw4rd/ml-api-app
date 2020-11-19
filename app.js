@@ -24,6 +24,16 @@ axios.get(`https://api.mavenlink.com/api/v1/time_entries.json`, config_get)
     });
 */
 
+let fullTeamEMEA = [
+    "jason.gsell@optimizely.com",
+    "david.sertillange@optimizely.com",
+    "hiltsje.smilde@optimizely.com",
+    "jil.maassen@optimizely.com",
+    "isabel.meijaard@optimizely.com",
+    "liam.miner@optimizely.com",
+    "lisa.pourier@optimizely.com"
+]
+
 // Talking to the API using async-await function
 async function fetchTimeEntries() {
     // set generic filters
@@ -31,15 +41,6 @@ async function fetchTimeEntries() {
     let paginationParam = `per_page=200`
 
     // define team members
-    let fullTeamEMEA = [
-        "jason.gsell@optimizely.com",
-        "david.sertillange@optimizely.com",
-        "hiltsje.smilde@optimizely.com",
-        "jil.maassen@optimizely.com",
-        "isabel.meijaard@optimizely.com",
-        "liam.miner@optimizely.com",
-        "lisa.pourier@optimizely.com"
-    ]
 
     let thuSlackers = [];
     let wedSlackers = [];
@@ -67,18 +68,18 @@ async function fetchTimeEntries() {
         let responseFull = await axios.get(`https://api.mavenlink.com/api/v1/time_entries.json?${includeParam}&${paginationParam}&${actionPerformedFilter}`, config_get);
         let responseBody = responseFull.data;
 
-        console.log(`### RESPONSE FROM THE AYNC-AWAIT`)
+        // console.log(`### RESPONSE FROM THE AYNC-AWAIT`)
 
         /* 
         Printing out different pieces of the response - helps to get sense of what data is available 
         and what's their structure. (At the same time, this is probably easier done in Postman.)
         */
-        console.log(`Response status: ${responseFull.status} ${responseFull.statusText}`);
-        console.log(`Number of returned time entries: ${responseBody.count}`);
+        // console.log(`Response status: ${responseFull.status} ${responseFull.statusText}`);
+        // console.log(`Number of returned time entries: ${responseBody.count}`);
         // console.log(responseBody.results);
         // console.log(responseBody.time_entries);
         // console.log(responseBody.users);
-        console.log(responseBody.meta);
+        // console.log(responseBody.meta);
 
         // Create array with users who added an entry yesterday (the date is controlled by request parameters)
         const userObjectValues = Object.values(responseBody.users)
@@ -90,12 +91,12 @@ async function fetchTimeEntries() {
             };
             usersWithEntry.push(userObject);
         });
-        console.log(`### PRINTING USERS WHOS TIME ENTRY HAS TIMESTAMP: ${export_date_formatted}`);
-        console.log(usersWithEntry);
+        // console.log(`### PRINTING USERS WHOS TIME ENTRY HAS TIMESTAMP: ${export_date_formatted}`);
+        // console.log(usersWithEntry);
         let usersWithEntryEmailsOnly = usersWithEntry.map(user => user.email);
 
         // filtering users who didn't submit anything for given day
-        console.log(`### SLACKERS FOR THE DAY ${export_date_formatted} BELOW`);
+        // console.log(`### SLACKERS FOR THE DAY ${export_date_formatted} BELOW`);
 
         let noSubmissionOnTheDayEmailOnly = fullTeamEMEA.filter((e) => {
             return !usersWithEntryEmailsOnly.includes(e)
@@ -124,10 +125,58 @@ async function fetchTimeEntries() {
                 break
         }
     }
-    console.log(weeklySlackers);
+    // console.log(weeklySlackers);
+    return weeklySlackers
 }
 
 fetchTimeEntries()
+    .then(result => {
+        pplWhoSlackedEmail = [...new Set(result.flat(1))];
+        pplWhoSlackedObject = [];
+        pplWhoSlackedEmail.forEach(weeklySlackerEmail => {
+            let firstName = weeklySlackerEmail.split('.')[0];
+            let firstNameCap = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+            
+            slackerObject = {
+                email: weeklySlackerEmail,
+                firstName: firstNameCap,
+                daysSlacked: []
+            };
+
+            // dailySlackers.forEach( slacker => {
+            //     let emailAdress = slacker;
+            //     let firstName = slacker.split('.')[0];
+            //     let firstNameCap = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+
+            //     console.log(`For day ${day}, I'll be sending email to: ${emailAdress} and in the body of the email, I'll address the person as ${firstNameCap}`);
+            // });
+
+            for (i=0; i<result.length; i++) {
+                let day = '';
+                switch(i) {
+                    case 0:
+                        day = 'Thursday'
+                        break
+                    case 1:
+                        day = 'Wednesday'
+                        break
+                    case 2:
+                        day = 'Tuesday'
+                        break
+                    case 3:
+                        day = 'Monday'
+                        break
+                }
+                let dailySlackers = result[i];
+                if (dailySlackers.includes(weeklySlackerEmail)) {
+                    slackerObject.daysSlacked.push(day);
+                }
+                slackerObject.daysSlacked.reverse();
+            }
+            pplWhoSlackedObject.push(slackerObject);
+        });
+        console.log(pplWhoSlackedObject);
+    })
     .catch(e => {
         console.log(`There has been a problem: ${e}`);
     });
